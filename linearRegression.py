@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 
 class LinearRegression:
-    def __init__(self, data_path):
+    def __init__(self, data_path: str) -> None:
         '''
         读入csv文件的数据
         默认以逗号分隔，第一行为表头，第一列为x，第二列为y
@@ -32,7 +32,7 @@ class LinearRegression:
         self.k = B[1]
         self.r = np.corrcoef(self.lny, Y_pred)[0, 1]
 
-    def plot(self, image_path):
+    def plot(self, image_path: str):
         '''
         绘制散点图和拟合直线
         '''
@@ -50,8 +50,8 @@ class LinearRegression:
 
 if __name__ == "__main__":
     script_path = os.path.dirname(os.path.abspath(__file__))
-    lr = LinearRegression(os.path.join(script_path, 'data/data1.csv'))
+    lr = LinearRegression(os.path.join(script_path, 'data', 'data1.csv'))
     lr.fit()
     print(f'Fitted line: y = {lr.k:.4f}x + {lr.b:.4f}')
     print(f'Correlation coefficient: r = {lr.r:.4f}')
-    lr.plot(os.path.join(script_path, 'result/images/linear_regression.png'))
+    lr.plot(os.path.join(script_path, 'result', 'images', 'linear_regression.png'))

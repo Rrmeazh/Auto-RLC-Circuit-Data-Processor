@@ -3,7 +3,7 @@ import pandas as pd
 import os
 
 class FrequencyResponse:
-    def __init__(self, data_path):
+    def __init__(self, data_path: str) -> None:
         '''
         读入csv文件的数据以初始化对象属性
         默认以逗号分隔，第一行为表头，第一列为频率，第二列为V_R峰-峰值，第三列为相位差
@@ -53,7 +53,7 @@ class FrequencyResponse:
     
 if __name__ == "__main__":
     script_path = os.path.dirname(os.path.abspath(__file__))
-    fr = FrequencyResponse(os.path.join(script_path, 'data/data2.csv'))
+    fr = FrequencyResponse(os.path.join(script_path, 'data', 'data2.csv'))
     f0, vpp_max, f1, f2, bandwidth, Q = fr.report()
     print(f'共振频率: {f0:.2f} Hz')
     print(f'峰-峰值最大值: {vpp_max:.2f} V')
