@@ -1,19 +1,29 @@
 import streamlit as st
 import pandas as pd
 import os
+import json
 import matplotlib.pyplot as plt
-import linearRegression
-import frequencyResponse
-import qwenChat
+from linearRegression import LinearRegression
+from frequencyResponse import FrequencyResponse
+from modelChat import ModelChat
 
-def save_uploaded_file(uploaded_file, path):
+def save_uploaded_file(
+        uploaded_file: any,
+        path: str
+    ):
     """
     保存上传的文件到指定路径
     """
     with open(path, "wb") as f:
         f.write(uploaded_file.getbuffer())
 
-def render_tab1(script_path, data1_path, Re, R1, L):
+def render_tab1(
+        script_path: str,
+        data1_path: str,
+        Re: float,
+        R1: float,
+        L: float
+    ):
     """
     第一部分：阻尼振荡
         提供两种数据输入方式：文件上传、手动输入
@@ -39,13 +49,13 @@ def render_tab1(script_path, data1_path, Re, R1, L):
             
     if has_data1 and st.button("处理阻尼振荡数据"):
         try:
-            lr = linearRegression.LinearRegression(data1_path)
+            lr = LinearRegression(data1_path)
             lr.fit()
             
             st.subheader("处理结果")
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("拟合直线", f"$\ln(V_c) = {lr.k:.4f} t + {lr.b:.4f}$")
+                st.metric("拟合直线", f"$\\ln(V_c) = {lr.k:.4f} t + {lr.b:.4f}$")
                 st.metric("相关系数 $r$", f"${lr.r:.4f}$")
             with col2:
                 beta_theory = (Re + R1) / (2 * L)
@@ -61,7 +71,7 @@ def render_tab1(script_path, data1_path, Re, R1, L):
             result_path = os.path.join(script_path, "result", "result_1.md")
             with open(result_path, "w", encoding="utf-8") as f:
                 f.write("### 阻尼振荡数据处理结果\n\n")
-                f.write(f"- **拟合直线**: $\ln(V_c) = {lr.k:.4f} t + {lr.b:.4f}$\n")
+                f.write(f"- **拟合直线**: $\\ln(V_c) = {lr.k:.4f} t + {lr.b:.4f}$\n")
                 f.write(f"- **相关系数 $r$**: ${lr.r:.4f}$\n")
                 f.write(f"- **理论衰减常数**: ${beta_theory:.4f} s^{{-1}}$\n")
                 f.write(f"- **实测衰减常数**: ${beta_measured:.4f} s^{{-1}}$\n")
@@ -69,7 +79,15 @@ def render_tab1(script_path, data1_path, Re, R1, L):
         except Exception as e:
             st.error(f"处理出错: {e}")
 
-def render_tab2(script_path, data2_path, Re, R1, R2, L, V_input):
+def render_tab2(
+        script_path: str,
+        data2_path: str,
+        Re: float,
+        R1: float,
+        R2: float,
+        L: float,
+        V_input: float
+    ):
     """
     第二部分：频率响应
         提供两种数据输入方式：文件上传、手动输入
@@ -95,7 +113,7 @@ def render_tab2(script_path, data2_path, Re, R1, R2, L, V_input):
             
     if has_data2 and st.button("处理频率响应数据"):
         try:
-            fr = frequencyResponse.FrequencyResponse(data2_path)
+            fr = FrequencyResponse(data2_path)
             f0, vpp_max, f1, f2, bandwidth, Q = fr.report()
             
             st.subheader("处理结果")
@@ -130,6 +148,48 @@ def render_tab2(script_path, data2_path, Re, R1, R2, L, V_input):
         except Exception as e:
             st.error(f"处理出错: {e}")
 
+def render_tab3(
+        script_path: str,
+        data1_path: str,
+        data2_path: str,
+        default_model_config_path: str
+    ):
+    """
+    第三部分：报告生成
+        读取前两部分处理结果，调用大语言模型生成结果分析
+    """
+    st.header("实验报告生成")
+    st.info("请确保前两部分的数据处理已完成，并且结果已保存。将API密钥、基础URL和模型名称填入配置文件中，并输入提示词，即可一键生成结果分析。")
+
+    with open(default_model_config_path, "r", encoding="utf-8") as f:
+        default_config = json.load(f)[0]
+    api_key = st.text_input("API密钥：`api_key`")
+    base_url = st.text_input("基础URL：`base_url`", value=default_config["base_url"])
+    model_name = st.text_input("模型名称：`model_name`", value=default_config["model"])
+    system_prompt = st.text_area("系统提示词：`system_prompt`", value=default_config["system_prompt"])
+    report_prompt = st.text_area("报告提示词：`report_prompt`", value=default_config["report_prompt"])
+
+    if st.button("生成实验报告"):
+        if not os.path.exists(data1_path) or not os.path.exists(data2_path):
+            st.error("请先完成前两部分的数据处理，并确保结果已保存。")
+            return
+        try:
+            with open(os.path.join(script_path, "result", "result_2.md"), "r", encoding="utf-8") as f:
+                result = f.read()
+            chat = ModelChat(api_key=api_key, base_url=base_url, model=model_name)
+            report = chat.report(
+                system_prompt=system_prompt,
+                report_prompt=report_prompt,
+                result=result
+            )
+            report_path = os.path.join(script_path, "result", "report.md")
+            with open(report_path, "w", encoding="utf-8") as f:
+                f.write(report)
+            st.success(f"报告已保存到 {report_path}")
+            st.markdown(report)
+        except Exception as e:
+            st.error(f"生成报告出错: {e}")
+
 def main():
     # 标题
     st.set_page_config(page_title="RLC实验数据处理", layout="wide")
@@ -137,17 +197,18 @@ def main():
 
     # 侧边栏
     st.sidebar.header("实验参数设置")
-    Re = st.sidebar.number_input("电源内阻值 $R_e / \Omega$", value=50.0, step=0.1)
-    R1 = st.sidebar.number_input("阻尼振动实验可变电阻值 $R_1 / \Omega$", value=100.0, step=0.1)
-    R2 = st.sidebar.number_input("受迫振动实验可变电阻值 $R_2 / \Omega$", value=500.0, step=0.1)
-    C = st.sidebar.number_input("电容值 $C / \mathrm{nF}$", value=10.0, step=0.1) * 1e-9
-    L = st.sidebar.number_input("电感值 $L / \mathrm{mH}$", value=20.0, step=0.1) * 1e-3
-    V_input = st.sidebar.number_input("谐振时输入电压峰峰值 $V_{\mathrm{input}} / \mathrm{V}$", value=5.0000, format="%.4f")
+    Re = st.sidebar.number_input("电源内阻值 $R_e / \\Omega$", value=50.0, step=0.1)
+    R1 = st.sidebar.number_input("阻尼振动实验可变电阻值 $R_1 / \\Omega$", value=100.0, step=0.1)
+    R2 = st.sidebar.number_input("受迫振动实验可变电阻值 $R_2 / \\Omega$", value=500.0, step=0.1)
+    C = st.sidebar.number_input("电容值 $C / \\mathrm{nF}$", value=10.0, step=0.1) * 1e-9
+    L = st.sidebar.number_input("电感值 $L / \\mathrm{mH}$", value=20.0, step=0.1) * 1e-3
+    V_input = st.sidebar.number_input("谐振时输入电压峰峰值 $V_{\\mathrm{input}} / \\mathrm{V}$", value=5.0000, format="%.4f")
 
     # 数据与路径建立
     script_path = os.path.dirname(os.path.abspath(__file__))
     data1_path = os.path.join(script_path, "data", "data1_temp.csv")
     data2_path = os.path.join(script_path, "data", "data2_temp.csv")
+    default_model_config_path = os.path.join(script_path, "defaultModelConfig.json")
     os.makedirs(os.path.join(script_path, "data"), exist_ok=True)
     os.makedirs(os.path.join(script_path, "result/images"), exist_ok=True)
 
@@ -157,21 +218,23 @@ def main():
         
         请先在侧边栏设置实验参数，包括：
         
-        - 电源内阻值 $R_e / \Omega$
-        - 阻尼振动实验可变电阻值 $R_1 / \Omega$
-        - 受迫振动实验可变电阻值 $R_2 / \Omega$
-        - 电容值 $C / \mathrm{nF}$
-        - 电感值 $L / \mathrm{mH}$
-        - 谐振时输入电压峰峰值 $V_{\mathrm{input}} / \mathrm{V}$
+        - 电源内阻值 $R_e / \\Omega$
+        - 阻尼振动实验可变电阻值 $R_1 / \\Omega$
+        - 受迫振动实验可变电阻值 $R_2 / \\Omega$
+        - 电容值 $C / \\mathrm{nF}$
+        - 电感值 $L / \\mathrm{mH}$
+        - 谐振时输入电压峰峰值 $V_{\\mathrm{input}} / \\mathrm{V}$
         
-        然后在下方输入数据（可选择上传csv文件或直接在表格中输入数据），一键处理数据并查看结果。
+        然后在下方输入数据（可选择上传csv文件或直接在表格中输入数据），一键处理数据，查看结果，并生成实验报告。
 
     """)
-    tab1, tab2 = st.tabs(["第一部分：阻尼振荡", "第二部分：频率响应"])
+    tab1, tab2, tab3 = st.tabs(["第一部分：阻尼振荡", "第二部分：频率响应", "第三部分：报告生成"])
     with tab1:
         render_tab1(script_path, data1_path, Re, R1, L)
     with tab2:
         render_tab2(script_path, data2_path, Re, R1, R2, L, V_input)
+    with tab3:
+        render_tab3(script_path, data1_path, data2_path, default_model_config_path)
 
 
 if __name__ == "__main__":
