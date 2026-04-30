@@ -163,7 +163,7 @@ def render_tab3(
 
     with open(default_model_config_path, "r", encoding="utf-8") as f:
         default_config = json.load(f)[0]
-    api_key = st.text_input("API密钥：`api_key`")
+    api_key = st.text_input("API密钥：`api_key`", value=default_config["api_key"])
     base_url = st.text_input("基础URL：`base_url`", value=default_config["base_url"])
     model_name = st.text_input("模型名称：`model_name`", value=default_config["model"])
     system_prompt = st.text_area("系统提示词：`system_prompt`", value=default_config["system_prompt"])
