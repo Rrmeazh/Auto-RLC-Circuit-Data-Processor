@@ -1,0 +1,8 @@
+[
+    {
+        "base_url": "https://madmodel.cs.tsinghua.edu.cn/v1/",
+        "model": "DeepSeek-R1-671B",
+        "system_prompt": "你是一名严谨的大学物理实验助教。",
+        "report_prompt": "请根据下面的实验数据处理结果，生成一份中文实验报告分析。"
+    }
+]
