@@ -71,6 +71,9 @@ def render_tab1(
             result_path = os.path.join(script_path, "result", "result_1.md")
             with open(result_path, "w", encoding="utf-8") as f:
                 f.write("### 阻尼振荡数据处理结果\n\n")
+                f.write(f"- **电源内阻值 $R_e$**: ${Re:.2f} \\Omega$\n")
+                f.write(f"- **可变电阻值 $R_1$**: ${R1:.2f} \\Omega$\n")
+                f.write(f"- **电感值 $L$**：${1000 * L:.2f} \\mathrm{{mH}}$\n")
                 f.write(f"- **拟合直线**: $\\ln(V_c) = {lr.k:.4f} t + {lr.b:.4f}$\n")
                 f.write(f"- **相关系数 $r$**: ${lr.r:.4f}$\n")
                 f.write(f"- **理论衰减常数**: ${beta_theory:.4f} s^{{-1}}$\n")
@@ -136,6 +139,10 @@ def render_tab2(
             result_path = os.path.join(script_path, "result", "result_2.md")
             with open(result_path, "w", encoding="utf-8") as f:
                 f.write("### 频率响应数据处理结果\n\n")
+                f.write(f"- **电源内阻值 $R_e$**: ${Re:.2f} \\Omega$\n")
+                f.write(f"- **可变电阻值 $R_2$**: ${R2:.2f} \\Omega$\n")
+                f.write(f"- **电感值 $L$**：${1000 * L:.2f} \\mathrm{{mH}}$\n")
+                f.write(f"- **谐振时输入电压峰峰值 $V_{{\\mathrm{{input}}}}$** ：${V_input:.4f} \\mathrm{{V}}$\n")
                 f.write(f"- **共振频率 $f_0$**: ${f0:.2f} \\mathrm{{kHz}}$\n")
                 f.write(f"- **峰-峰值最大值**: ${vpp_max:.2f} \\mathrm{{V}}$\n")
                 f.write(f"- **品质系数 $Q$**: ${Q:.2f}$\n")
@@ -174,8 +181,11 @@ def render_tab3(
             st.error("请先完成前两部分的数据处理，并确保结果已保存。")
             return
         try:
+            with open(os.path.join(script_path, "result", "result_1.md"), "r", encoding="utf-8") as f:
+                result_1 = f.read()
             with open(os.path.join(script_path, "result", "result_2.md"), "r", encoding="utf-8") as f:
-                result = f.read()
+                result_2 = f.read()
+            result = result_1 + "\n\n" + result_2
             chat = ModelChat(api_key=api_key, base_url=base_url, model=model_name)
             report = chat.report(
                 system_prompt=system_prompt,
