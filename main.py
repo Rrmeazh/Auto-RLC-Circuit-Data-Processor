@@ -51,6 +51,7 @@ def render_tab1(
         try:
             lr = LinearRegression(data1_path)
             lr.fit()
+            lr.calc_confidence_band()
             
             st.subheader("处理结果")
             col1, col2 = st.columns(2)
