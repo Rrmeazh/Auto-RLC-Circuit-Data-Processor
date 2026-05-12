@@ -1,0 +1,8 @@
+[
+    {
+        "api_key": "",
+        "base_url": "https://madmodel.cs.tsinghua.edu.cn/v1/",
+        "model": "DeepSeek-R1-671B",
+        "system_prompt": ""
+    }
+]

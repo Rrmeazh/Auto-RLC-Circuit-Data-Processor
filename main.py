@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 import json
+from datetime import datetime
 import matplotlib.pyplot as plt
 from linearRegression import LinearRegression
 from frequencyResponse import FrequencyResponse
@@ -159,7 +160,7 @@ def render_tab2(
 def render_tab3(
         data1_path: str,
         data2_path: str,
-        default_model_config_path: str,
+        default_config_path: str,
         result_path: str
     ):
     """
@@ -169,13 +170,13 @@ def render_tab3(
     st.header("实验报告生成")
     st.info("请确保前两部分的数据处理已完成，并且结果已保存。将API密钥、基础URL和模型名称填入配置文件中，并输入提示词，即可一键生成结果分析。")
 
-    with open(default_model_config_path, "r", encoding="utf-8") as f:
+    with open(default_config_path, "r", encoding="utf-8") as f:
         default_config = json.load(f)[0]
-    api_key = st.text_input("API密钥：`api_key`", value=default_config["api_key"])
-    base_url = st.text_input("基础URL：`base_url`", value=default_config["base_url"])
-    model_name = st.text_input("模型名称：`model_name`", value=default_config["model"])
-    system_prompt = st.text_area("系统提示词：`system_prompt`", value=default_config["system_prompt"])
-    report_prompt = st.text_area("报告提示词：`report_prompt`", value=default_config["report_prompt"])
+    api_key = st.text_input("API密钥：`api_key`", value=default_config["api_key"], key="tab3_api_key")
+    base_url = st.text_input("基础URL：`base_url`", value=default_config["base_url"], key="tab3_base_url")
+    model_name = st.text_input("模型名称：`model_name`", value=default_config["model"], key="tab3_model_name")
+    system_prompt = st.text_area("系统提示词：`system_prompt`", value=default_config["system_prompt"], key="tab3_sys_prompt")
+    report_prompt = st.text_area("报告提示词：`report_prompt`", value=default_config["report_prompt"], key="tab3_report_prompt")
 
     if st.button("生成实验报告"):
         if not os.path.exists(data1_path) or not os.path.exists(data2_path):
@@ -188,7 +189,7 @@ def render_tab3(
                 result_2 = f.read()
             result = result_1 + "\n\n" + result_2
             chat = ModelChat(api_key=api_key, base_url=base_url, model=model_name)
-            report = chat.report(
+            report = chat.response(
                 system_prompt=system_prompt,
                 report_prompt=report_prompt,
                 result=result
@@ -199,6 +200,54 @@ def render_tab3(
             st.markdown(report)
         except Exception as e:
             st.error(f"生成报告出错: {e}")
+
+def render_tab4(
+        default_config_path: str,
+        result_path: str
+    ):
+    """
+    第四部分：提问与讨论
+        允许用户输入问题，如果输入了api密钥、基础URL和模型名称，则调用大语言模型进行回答和讨论，并保存聊天记录
+    """
+    st.header("提问与讨论")
+    st.info("在下方输入你的问题，如果你配置了API密钥、基础URL和模型名称，系统将调用大语言模型进行回答和讨论。问题与回答将被保存到本地。")
+
+    question = st.text_input("请输入你的问题：", key="question")
+    with open(default_config_path, "r", encoding="utf-8") as f:
+        default_config = json.load(f)[0]
+    api_key = st.text_input("API密钥：`api_key`", value=default_config["api_key"], key="tab4_api_key")
+    base_url = st.text_input("基础URL：`base_url`", value=default_config["base_url"], key="tab4_base_url")
+    model_name = st.text_input("模型名称：`model_name`", value=default_config["model"], key="tab4_model_name")
+    system_prompt = st.text_area("系统提示词：`system_prompt`", value=default_config["system_prompt"], key="tab4_sys_prompt")
+
+    if st.button("提交问题"):
+        history = []
+        chat_history_path = os.path.join(result_path, "chat_records", f"chat_history_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.json")
+
+        if not question.strip():
+            st.warning("请输入问题。")
+            return
+        elif api_key.strip() and base_url.strip() and model_name.strip():
+            try:
+                chat = ModelChat(api_key=api_key, base_url=base_url, model=model_name)
+                answer = chat.response(
+                    system_prompt=system_prompt,
+                    report_prompt=question,
+                    result=""
+                )
+                st.success(f"聊天记录已保存到 {chat_history_path}")
+                st.markdown(f"**回答：** {answer}")
+                history.append({"role": "user", "content": question})
+                history.append({"role": "assistant", "content": answer})
+            except Exception as e:
+                st.error(f"提问出错: {e}")
+        else:
+            history.append({"role": "user", "content": question})
+            history.append({"role": "assistant", "content": ""})
+            st.success(f"问题已保存到 {chat_history_path}，但因未配置API密钥、基础URL或模型名称，无法生成回答。")
+        if history:
+            with open(chat_history_path, "w", encoding="utf-8") as f:
+                json.dump(history, f, ensure_ascii=False, indent=4)
 
 def main():
     # 标题
@@ -220,9 +269,11 @@ def main():
     data1_path = os.path.join(script_path, "data", f"data1_{id}.csv")
     data2_path = os.path.join(script_path, "data", f"data2_{id}.csv")
     result_path = os.path.join(script_path, "result",f"{id}")
-    default_model_config_path = os.path.join(script_path, "defaultModelConfig.json")
+    default_report_config_path = os.path.join(script_path, "defaultReportConfig.json")
+    default_answer_config_path = os.path.join(script_path, "defaultAnswerConfig.json")
     os.makedirs(os.path.join(script_path, "data"), exist_ok=True)
-    os.makedirs(os.path.join(script_path, f"result/{id}"), exist_ok=True)
+    os.makedirs(result_path, exist_ok=True)
+    os.makedirs(os.path.join(result_path, "chat_records"), exist_ok=True)
     # 主界面
     st.markdown("""
         **使用说明：**
@@ -236,16 +287,18 @@ def main():
         - 电感值 $L / \\mathrm{mH}$
         - 谐振时输入电压峰峰值 $V_{\\mathrm{input}} / \\mathrm{V}$
         
-        然后在下方输入数据（可选择上传csv文件或直接在表格中输入数据），一键处理数据，查看结果，并生成实验报告。
+        然后在下方输入数据（可选择上传csv文件或直接在表格中输入数据），一键处理数据，查看结果，生成实验报告，并进行提问以及（与大模型的）讨论。
 
     """)
-    tab1, tab2, tab3 = st.tabs(["第一部分：阻尼振荡", "第二部分：频率响应", "第三部分：报告生成"])
+    tab1, tab2, tab3, tab4 = st.tabs(["第一部分：阻尼振荡", "第二部分：频率响应", "第三部分：报告生成", "第四部分：提问与讨论"])
     with tab1:
         render_tab1(data1_path, Re, R1, L, result_path)
     with tab2:
         render_tab2(data2_path, Re, R1, R2, L, V_input, result_path)
     with tab3:
-        render_tab3(data1_path, data2_path, default_model_config_path, result_path)
+        render_tab3(data1_path, data2_path, default_report_config_path, result_path)
+    with tab4:
+        render_tab4(default_answer_config_path, result_path)
 
 
 if __name__ == "__main__":
