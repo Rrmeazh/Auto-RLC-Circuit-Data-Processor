@@ -23,7 +23,7 @@ class LinearRegression:
         self.confidence_rate = 0.95 # 置信水平
         self.confidence_band = (np.zeros_like(self.lny), np.zeros_like(self.lny)) # 置信区间带
 
-    def fit(self):
+    def fit(self) -> None:
         '''
         计算拟合斜率、截距和相关系数
         '''
@@ -35,7 +35,7 @@ class LinearRegression:
         self.k = B[1]
         self.r = np.corrcoef(self.lny, self.lny_pred)[0, 1]
     
-    def calc_confidence_band(self):
+    def calc_confidence_band(self) -> None:
         '''
         计算整个回归线的置信区间带
         '''
@@ -45,7 +45,7 @@ class LinearRegression:
         s_mu_x = np.sqrt(s_squared * (1/n + (self.x - np.mean(self.x))**2 / np.sum((self.x - np.mean(self.x))**2))) # 预测值的标准差
         self.confidence_band = (self.lny_pred - np.sqrt(2 * F) * s_mu_x, self.lny_pred + np.sqrt(2 * F) * s_mu_x)
 
-    def plot(self, image_path: str):
+    def plot(self, image_path: str) -> None:
         '''
         绘制散点图、拟合直线与置信区间带
         '''

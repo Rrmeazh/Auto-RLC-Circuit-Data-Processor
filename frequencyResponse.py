@@ -21,7 +21,7 @@ class FrequencyResponse:
         self.f2 = None # 3dB带宽的上限频率
 
 
-    def find_3db_points(self):
+    def find_3db_points(self) -> None:
         '''
         找到3dB带宽的频率上下限
         '''
@@ -35,7 +35,7 @@ class FrequencyResponse:
         self.f1 = self.freq[indices[0]] + (vpp_3db - self.vpp[indices[0]]) * (self.freq[indices[0] + 1] - self.freq[indices[0]]) / (self.vpp[indices[0] + 1] - self.vpp[indices[0]])
         self.f2 = self.freq[indices[1]] + (vpp_3db - self.vpp[indices[1]]) * (self.freq[indices[1] + 1] - self.freq[indices[1]]) / (self.vpp[indices[1] + 1] - self.vpp[indices[1]])
 
-    def report(self):
+    def report(self) -> tuple[float, float, float, float, float, float]:
         '''
         输出共振频率、峰-峰值最大值、3dB带宽与品质系数
         Returns:

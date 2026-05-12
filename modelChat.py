@@ -23,7 +23,7 @@ class ModelChat:
             system_prompt: str,
             report_prompt: str,
             result: str
-        ):
+        ) -> str:
         '''
         根据实验数据处理结果生成实验报告分析
 
