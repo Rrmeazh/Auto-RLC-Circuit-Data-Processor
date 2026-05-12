@@ -18,11 +18,11 @@ def save_uploaded_file(
         f.write(uploaded_file.getbuffer())
 
 def render_tab1(
-        script_path: str,
         data1_path: str,
         Re: float,
         R1: float,
-        L: float
+        L: float,
+        result_path: str
     ):
     """
     第一部分：阻尼振荡
@@ -64,13 +64,13 @@ def render_tab1(
                 st.metric("理论衰减常数", f"${beta_theory:.4f} s^{{-1}}$")
                 st.metric("实测衰减常数", f"${beta_measured:.4f} s^{{-1}}$")
             
-            img_path = os.path.join(script_path, "result", "images", "linear_regression_temp.png")
+            img_path = os.path.join(result_path, "linear_regression.png")
             lr.plot(img_path)
             st.image(img_path, caption="线性拟合图表")
 
             # 保存结果到本地
-            result_path = os.path.join(script_path, "result", "result_1.md")
-            with open(result_path, "w", encoding="utf-8") as f:
+            result_1_path = os.path.join(result_path, "result_1.md")
+            with open(result_1_path, "w", encoding="utf-8") as f:
                 f.write("### 阻尼振荡数据处理结果\n\n")
                 f.write(f"- **电源内阻值 $R_e$**: ${Re:.2f} \\Omega$\n")
                 f.write(f"- **可变电阻值 $R_1$**: ${R1:.2f} \\Omega$\n")
@@ -79,18 +79,18 @@ def render_tab1(
                 f.write(f"- **相关系数 $r$**: ${lr.r:.4f}$\n")
                 f.write(f"- **理论衰减常数**: ${beta_theory:.4f} s^{{-1}}$\n")
                 f.write(f"- **实测衰减常数**: ${beta_measured:.4f} s^{{-1}}$\n")
-            st.success(f"结果已保存到 {result_path}")
+            st.success(f"结果已保存到 {result_1_path}")
         except Exception as e:
             st.error(f"处理出错: {e}")
 
 def render_tab2(
-        script_path: str,
         data2_path: str,
         Re: float,
         R1: float,
         R2: float,
         L: float,
-        V_input: float
+        V_input: float,
+        result_path: str
     ):
     """
     第二部分：频率响应
@@ -137,8 +137,8 @@ def render_tab2(
                 st.metric("修正衰减常数", f"${beta_corrected:.4f} s^{{-1}}$")
 
             # 保存结果到本地
-            result_path = os.path.join(script_path, "result", "result_2.md")
-            with open(result_path, "w", encoding="utf-8") as f:
+            result_2_path = os.path.join(result_path, "result_2.md")
+            with open(result_2_path, "w", encoding="utf-8") as f:
                 f.write("### 频率响应数据处理结果\n\n")
                 f.write(f"- **电源内阻值 $R_e$**: ${Re:.2f} \\Omega$\n")
                 f.write(f"- **可变电阻值 $R_2$**: ${R2:.2f} \\Omega$\n")
@@ -157,10 +157,10 @@ def render_tab2(
             st.error(f"处理出错: {e}")
 
 def render_tab3(
-        script_path: str,
         data1_path: str,
         data2_path: str,
-        default_model_config_path: str
+        default_model_config_path: str,
+        result_path: str
     ):
     """
     第三部分：报告生成
@@ -182,9 +182,9 @@ def render_tab3(
             st.error("请先完成前两部分的数据处理，并确保结果已保存。")
             return
         try:
-            with open(os.path.join(script_path, "result", "result_1.md"), "r", encoding="utf-8") as f:
+            with open(os.path.join(result_path, "result_1.md"), "r", encoding="utf-8") as f:
                 result_1 = f.read()
-            with open(os.path.join(script_path, "result", "result_2.md"), "r", encoding="utf-8") as f:
+            with open(os.path.join(result_path, "result_2.md"), "r", encoding="utf-8") as f:
                 result_2 = f.read()
             result = result_1 + "\n\n" + result_2
             chat = ModelChat(api_key=api_key, base_url=base_url, model=model_name)
@@ -193,10 +193,9 @@ def render_tab3(
                 report_prompt=report_prompt,
                 result=result
             )
-            report_path = os.path.join(script_path, "result", "report.md")
-            with open(report_path, "w", encoding="utf-8") as f:
+            with open(os.path.join(result_path, "report.md"), "w", encoding="utf-8") as f:
                 f.write(report)
-            st.success(f"报告已保存到 {report_path}")
+            st.success(f"报告已保存到 {os.path.join(result_path, 'report.md')}")
             st.markdown(report)
         except Exception as e:
             st.error(f"生成报告出错: {e}")
@@ -208,6 +207,7 @@ def main():
 
     # 侧边栏
     st.sidebar.header("实验参数设置")
+    id = st.sidebar.text_input("学号", value="2020114514")
     Re = st.sidebar.number_input("电源内阻值 $R_e / \\Omega$", value=50.0, step=0.1)
     R1 = st.sidebar.number_input("阻尼振动实验可变电阻值 $R_1 / \\Omega$", value=100.0, step=0.1)
     R2 = st.sidebar.number_input("受迫振动实验可变电阻值 $R_2 / \\Omega$", value=500.0, step=0.1)
@@ -217,17 +217,17 @@ def main():
 
     # 数据与路径建立
     script_path = os.path.dirname(os.path.abspath(__file__))
-    data1_path = os.path.join(script_path, "data", "data1_temp.csv")
-    data2_path = os.path.join(script_path, "data", "data2_temp.csv")
+    data1_path = os.path.join(script_path, "data", f"data1_{id}.csv")
+    data2_path = os.path.join(script_path, "data", f"data2_{id}.csv")
+    result_path = os.path.join(script_path, "result",f"{id}")
     default_model_config_path = os.path.join(script_path, "defaultModelConfig.json")
     os.makedirs(os.path.join(script_path, "data"), exist_ok=True)
-    os.makedirs(os.path.join(script_path, "result/images"), exist_ok=True)
-
+    os.makedirs(os.path.join(script_path, f"result/{id}"), exist_ok=True)
     # 主界面
     st.markdown("""
         **使用说明：**
         
-        请先在侧边栏设置实验参数，包括：
+        请先在侧边栏输入学号，并设置实验参数，包括：
         
         - 电源内阻值 $R_e / \\Omega$
         - 阻尼振动实验可变电阻值 $R_1 / \\Omega$
@@ -241,11 +241,11 @@ def main():
     """)
     tab1, tab2, tab3 = st.tabs(["第一部分：阻尼振荡", "第二部分：频率响应", "第三部分：报告生成"])
     with tab1:
-        render_tab1(script_path, data1_path, Re, R1, L)
+        render_tab1(data1_path, Re, R1, L, result_path)
     with tab2:
-        render_tab2(script_path, data2_path, Re, R1, R2, L, V_input)
+        render_tab2(data2_path, Re, R1, R2, L, V_input, result_path)
     with tab3:
-        render_tab3(script_path, data1_path, data2_path, default_model_config_path)
+        render_tab3(data1_path, data2_path, default_model_config_path, result_path)
 
 
 if __name__ == "__main__":
