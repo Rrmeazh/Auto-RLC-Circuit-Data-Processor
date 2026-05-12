@@ -18,7 +18,7 @@ class ModelChat:
             client_options["base_url"] = base_url
         self.client = OpenAI(**client_options)
 
-    def report(
+    def response(
             self,
             system_prompt: str,
             report_prompt: str,
@@ -61,7 +61,7 @@ if __name__ == "__main__":
         base_url=config["base_url"],
         model=config["model"]
     )
-    report = chat.report(
+    report = chat.response(
         system_prompt=config["system_prompt"],
         report_prompt=config["report_prompt"],
         result=result
