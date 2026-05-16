@@ -176,7 +176,7 @@ def render_tab3(
     base_url = st.text_input("基础URL：`base_url`", value=default_config["base_url"], key="tab3_base_url")
     model_name = st.text_input("模型名称：`model_name`", value=default_config["model"], key="tab3_model_name")
     system_prompt = st.text_area("系统提示词：`system_prompt`", value=default_config["system_prompt"], key="tab3_sys_prompt")
-    report_prompt = st.text_area("报告提示词：`report_prompt`", value=default_config["report_prompt"], key="tab3_report_prompt")
+    report_prompt = st.text_area("报告提示词：`report_prompt`", value=default_config["user_prompt"], key="tab3_report_prompt")
 
     if st.button("生成实验报告"):
         if not os.path.exists(data1_path) or not os.path.exists(data2_path):
@@ -191,7 +191,7 @@ def render_tab3(
             chat = ModelChat(api_key=api_key, base_url=base_url, model=model_name)
             report = chat.response(
                 system_prompt=system_prompt,
-                report_prompt=report_prompt,
+                user_prompt=report_prompt,
                 result=result
             )
             with open(os.path.join(result_path, "report.md"), "w", encoding="utf-8") as f:
@@ -201,8 +201,27 @@ def render_tab3(
         except Exception as e:
             st.error(f"生成报告出错: {e}")
 
+def load_config():
+    """
+    配置上传回调函数：
+    在上传文件发生改变时触发，解析 JSON 并在 session_state 中强制覆盖变量
+    """
+    uploaded_file = st.session_state.tab4_config_file
+    if uploaded_file is not None:
+        try:
+            # 重新定位文件指针
+            uploaded_file.seek(0)
+            config = json.load(uploaded_file)[0]
+            # 覆写 session_state
+            st.session_state.question = config.get("user_prompt", "")
+            st.session_state.tab4_api_key = config.get("api_key", "")
+            st.session_state.tab4_base_url = config.get("base_url", "")
+            st.session_state.tab4_model_name = config.get("model", "")
+            st.session_state.tab4_sys_prompt = config.get("system_prompt", "")
+        except Exception as e:
+            st.error(f"加载配置文件出错: {e}")
+
 def render_tab4(
-        default_config_path: str,
         result_path: str
     ):
     """
@@ -210,15 +229,22 @@ def render_tab4(
         允许用户输入问题，如果输入了api密钥、基础URL和模型名称，则调用大语言模型进行回答和讨论，并保存聊天记录
     """
     st.header("提问与讨论")
-    st.info("在下方输入你的问题，如果你配置了API密钥、基础URL和模型名称，系统将调用大语言模型进行回答和讨论。问题与回答将被保存到本地。")
+    st.info("在下方输入你的问题，如果你配置了API密钥、基础URL和模型名称，系统将调用大语言模型进行回答和讨论。问题与回答将被保存到本地。\n你可以选择上传一个JSON配置文件以批量填充API密钥、基础URL、模型名称、系统提示词与用户提示词。`./modelConfig` 文件夹中储存了三份可用的配置文件，你也可以根据需要自定义配置文件。")
+
+    uploaded_config = st.file_uploader(
+        "上传JSON配置文件（可选）",
+        type=["json"],
+        key="tab4_config_file",
+        on_change=load_config
+    )
+    if uploaded_config is not None:
+        st.success("配置文件加载成功！你可以继续修改。")
 
     question = st.text_input("请输入你的问题：", key="question")
-    with open(default_config_path, "r", encoding="utf-8") as f:
-        default_config = json.load(f)[0]
-    api_key = st.text_input("API密钥：`api_key`", value=default_config["api_key"], key="tab4_api_key")
-    base_url = st.text_input("基础URL：`base_url`", value=default_config["base_url"], key="tab4_base_url")
-    model_name = st.text_input("模型名称：`model_name`", value=default_config["model"], key="tab4_model_name")
-    system_prompt = st.text_area("系统提示词：`system_prompt`", value=default_config["system_prompt"], key="tab4_sys_prompt")
+    api_key = st.text_input("API密钥：`api_key`", key="tab4_api_key")
+    base_url = st.text_input("基础URL：`base_url`", key="tab4_base_url")
+    model_name = st.text_input("模型名称：`model_name`", key="tab4_model_name")
+    system_prompt = st.text_area("系统提示词：`system_prompt`", key="tab4_sys_prompt")
 
     if st.button("提交问题"):
         history = []
@@ -232,7 +258,7 @@ def render_tab4(
                 chat = ModelChat(api_key=api_key, base_url=base_url, model=model_name)
                 answer = chat.response(
                     system_prompt=system_prompt,
-                    report_prompt=question,
+                    user_prompt=question,
                     result=""
                 )
                 st.success(f"聊天记录已保存到 {chat_history_path}")
@@ -269,8 +295,7 @@ def main():
     data1_path = os.path.join(script_path, "data", f"data1_{id}.csv")
     data2_path = os.path.join(script_path, "data", f"data2_{id}.csv")
     result_path = os.path.join(script_path, "result",f"{id}")
-    default_report_config_path = os.path.join(script_path, "defaultReportConfig.json")
-    default_answer_config_path = os.path.join(script_path, "defaultAnswerConfig.json")
+    default_report_config_path = os.path.join(script_path,"modelConfig", "defaultReportConfig.json")
     os.makedirs(os.path.join(script_path, "data"), exist_ok=True)
     os.makedirs(result_path, exist_ok=True)
     os.makedirs(os.path.join(result_path, "chat_records"), exist_ok=True)
@@ -298,7 +323,7 @@ def main():
     with tab3:
         render_tab3(data1_path, data2_path, default_report_config_path, result_path)
     with tab4:
-        render_tab4(default_answer_config_path, result_path)
+        render_tab4(result_path)
 
 
 if __name__ == "__main__":

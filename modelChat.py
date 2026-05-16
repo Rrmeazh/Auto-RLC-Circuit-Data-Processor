@@ -21,7 +21,7 @@ class ModelChat:
     def response(
             self,
             system_prompt: str,
-            report_prompt: str,
+            user_prompt: str,
             result: str
         ) -> str:
         '''
@@ -29,10 +29,10 @@ class ModelChat:
 
         Args:
             system_prompt: 系统提示，描述模型的角色和任务
-            report_prompt: 用户提示，说明需要生成什么样的报告
+            user_prompt: 用户提示，说明需要生成什么样的报告
             result: 实验数据处理结果文本
         '''
-        prompt = f"""{report_prompt}{result}""".strip()
+        prompt = f"""{user_prompt}{result}""".strip()
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     )
     report = chat.response(
         system_prompt=config["system_prompt"],
-        report_prompt=config["report_prompt"],
+        user_prompt=config["user_prompt"],
         result=result
     )
     print(report)
